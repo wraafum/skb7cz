@@ -132,26 +132,21 @@ function updateResourcesDisplay() {
     if (dom.essencePerClickEl) {
         dom.essencePerClickEl.textContent = gameState.essencePerClick;
     }
-    if (dom.passiveEssenceEl) {
-        dom.passiveEssenceEl.textContent = gameState.passiveEssencePerSecond.toFixed(1);
+    if (dom.passiveEssenceRateEl) {
+        dom.passiveEssenceRateEl.textContent = gameState.passiveEssencePerSecond.toFixed(1);
     }
 }
 
 function updateLilithDisplay() {
-    if (!gameState.initialInteractionCompleted) return;
-
     const currentStage = lilithStages[gameState.lilithStage];
     if (!currentStage) return;
 
-    if (dom.lilithNameEl) {
-        dom.lilithNameEl.textContent = gameState.lilithName || 'Lilith';
+    if (dom.lilithNameStageEl) {
+        dom.lilithNameStageEl.textContent = `${gameState.lilithName || 'Lilith'} - Etap ${currentStage.name}`;
     }
-    if (dom.lilithStageEl) {
-        dom.lilithStageEl.textContent = currentStage.name;
-    }
-    if (dom.lilithImageEl) {
-        dom.lilithImageEl.src = currentStage.imagePath;
-        dom.lilithImageEl.alt = currentStage.name;
+    if (dom.lilithImgTag) {
+        dom.lilithImgTag.src = currentStage.imagePath;
+        dom.lilithImgTag.alt = currentStage.name;
     }
     if (dom.lilithDescriptionEl) {
         const description = typeof currentStage.description === 'function' 
@@ -164,7 +159,7 @@ function updateLilithDisplay() {
 }
 
 function updateLilithThoughts() {
-    if (!dom.lilithThoughtsEl) return;
+    if (!dom.lilithThoughtEl) return;
 
     let thoughtText = '';
     
@@ -192,18 +187,18 @@ function updateLilithThoughts() {
     }
 
     if (thoughtText) {
-        dom.lilithThoughtsEl.textContent = thoughtText;
-        dom.lilithThoughtsEl.style.fontStyle = 'italic';
+        dom.lilithThoughtEl.textContent = thoughtText;
+        dom.lilithThoughtEl.style.fontStyle = 'italic';
     } else {
-        dom.lilithThoughtsEl.textContent = '(Lilith wydaje się zamyślona...)';
-        dom.lilithThoughtsEl.style.fontStyle = 'italic';
+        dom.lilithThoughtEl.textContent = '(Lilith wydaje się zamyślona...)';
+        dom.lilithThoughtEl.style.fontStyle = 'italic';
     }
 }
 
 function updateDialoguesDisplay() {
-    if (!dom.interactionsListEl) return;
+    if (!dom.availableDialoguesEl) return;
 
-    dom.interactionsListEl.innerHTML = '';
+    dom.availableDialoguesEl.innerHTML = '';
 
     const availableDialogues = allDialogues.filter(dialogue => {
         if (dialogue.id === 'summoning_ritual' && gameState.initialInteractionCompleted) return false;
@@ -233,18 +228,19 @@ function updateDialoguesDisplay() {
             button.disabled = true;
             button.classList.add('button-disabled');
         } else {
-            button.onclick = () => {
-                const gameLogic = window.gameLogic || (async () => {
-                    const module = await import('./gameLogic.js');
-                    return module;
-                })();
-                if (gameLogic.startDialogue) {
-                    gameLogic.startDialogue(dialogue.id);
+            button.onclick = async () => {
+                try {
+                    const gameLogic = await import('./gameLogic.js');
+                    if (gameLogic.startDialogue) {
+                        gameLogic.startDialogue(dialogue.id);
+                    }
+                } catch (error) {
+                    console.error('Error importing gameLogic:', error);
                 }
             };
         }
         
-        dom.interactionsListEl.appendChild(button);
+        dom.availableDialoguesEl.appendChild(button);
     });
 }
 
@@ -288,13 +284,14 @@ function updateUpgradesDisplay() {
                 button.disabled = true;
                 button.classList.add('button-disabled');
             } else {
-                button.onclick = () => {
-                    const gameLogic = window.gameLogic || (async () => {
-                        const module = await import('./gameLogic.js');
-                        return module;
-                    })();
-                    if (gameLogic.buyUpgrade) {
-                        gameLogic.buyUpgrade(upgrade.id);
+                button.onclick = async () => {
+                    try {
+                        const gameLogic = await import('./gameLogic.js');
+                        if (gameLogic.buyUpgrade) {
+                            gameLogic.buyUpgrade(upgrade.id);
+                        }
+                    } catch (error) {
+                        console.error('Error importing gameLogic:', error);
                     }
                 };
             }
@@ -307,58 +304,61 @@ function updateUpgradesDisplay() {
 }
 
 function updateUpgradeChoicesDisplay() {
-    if (!dom.upgradeChoicesEl) return;
+    if (!dom.upgradeChoicesContainerEl) return;
 
     if (!gameState.activeChoiceGroupId) {
-        dom.upgradeChoicesEl.classList.add('hidden');
+        dom.upgradeChoicesContainerEl.classList.add('hidden');
         return;
     }
 
     const choiceGroup = allChoiceUpgradeGroups[gameState.activeChoiceGroupId];
     if (!choiceGroup) {
-        dom.upgradeChoicesEl.classList.add('hidden');
+        dom.upgradeChoicesContainerEl.classList.add('hidden');
         return;
     }
 
-    dom.upgradeChoicesEl.classList.remove('hidden');
-    dom.upgradeChoicesEl.innerHTML = `
-        <h3>Wybór Ulepszenia</h3>
-        <p>${choiceGroup.prompt}</p>
-        <div class="choice-options"></div>
-    `;
+    dom.upgradeChoicesContainerEl.classList.remove('hidden');
+    
+    if (dom.upgradeChoicePromptEl) {
+        dom.upgradeChoicePromptEl.textContent = choiceGroup.prompt;
+    }
 
-    const optionsContainer = dom.upgradeChoicesEl.querySelector('.choice-options');
-    choiceGroup.choices.forEach(choice => {
-        const choiceDiv = document.createElement('div');
-        choiceDiv.classList.add('choice-option');
+    if (dom.upgradeChoicesListEl) {
+        dom.upgradeChoicesListEl.innerHTML = '';
         
-        choiceDiv.innerHTML = `
-            <h4>${choice.name}</h4>
-            <p>${choice.description}</p>
-        `;
+        choiceGroup.choices.forEach(choice => {
+            const choiceDiv = document.createElement('div');
+            choiceDiv.classList.add('choice-option');
+            
+            choiceDiv.innerHTML = `
+                <h4>${choice.name}</h4>
+                <p>${choice.description}</p>
+            `;
 
-        const button = document.createElement('button');
-        button.classList.add('interactive-button', 'button-primary');
-        button.textContent = 'Wybierz';
-        button.onclick = () => {
-            const gameLogic = window.gameLogic || (async () => {
-                const module = await import('./gameLogic.js');
-                return module;
-            })();
-            if (gameLogic.selectUpgradeChoice) {
-                gameLogic.selectUpgradeChoice(gameState.activeChoiceGroupId, choice.id);
-            }
-        };
+            const button = document.createElement('button');
+            button.classList.add('interactive-button', 'button-primary');
+            button.textContent = 'Wybierz';
+            button.onclick = async () => {
+                try {
+                    const gameLogic = await import('./gameLogic.js');
+                    if (gameLogic.selectUpgradeChoice) {
+                        gameLogic.selectUpgradeChoice(gameState.activeChoiceGroupId, choice.id);
+                    }
+                } catch (error) {
+                    console.error('Error importing gameLogic:', error);
+                }
+            };
 
-        choiceDiv.appendChild(button);
-        optionsContainer.appendChild(choiceDiv);
-    });
+            choiceDiv.appendChild(button);
+            dom.upgradeChoicesListEl.appendChild(choiceDiv);
+        });
+    }
 }
 
 function updateResearchDisplay() {
-    if (!dom.researchListEl) return;
+    if (!dom.researchProjectsListEl) return;
 
-    dom.researchListEl.innerHTML = '';
+    dom.researchProjectsListEl.innerHTML = '';
 
     const availableProjects = allResearchProjects.filter(project => {
         const projectState = gameState.researchProjectsState.find(s => s.id === project.id);
@@ -389,26 +389,27 @@ function updateResearchDisplay() {
             button.disabled = true;
             button.classList.add('button-disabled');
         } else {
-            button.onclick = () => {
-                const gameLogic = window.gameLogic || (async () => {
-                    const module = await import('./gameLogic.js');
-                    return module;
-                })();
-                if (gameLogic.startResearch) {
-                    gameLogic.startResearch(project.id);
+            button.onclick = async () => {
+                try {
+                    const gameLogic = await import('./gameLogic.js');
+                    if (gameLogic.startResearch) {
+                        gameLogic.startResearch(project.id);
+                    }
+                } catch (error) {
+                    console.error('Error importing gameLogic:', error);
                 }
             };
         }
 
         projectDiv.appendChild(button);
-        dom.researchListEl.appendChild(projectDiv);
+        dom.researchProjectsListEl.appendChild(projectDiv);
     });
 }
 
 function updateRitualsDisplay() {
-    if (!dom.ritualsListEl) return;
+    if (!dom.darkRitualsListEl) return;
 
-    dom.ritualsListEl.innerHTML = '';
+    dom.darkRitualsListEl.innerHTML = '';
 
     const availableRituals = allDarkRituals.filter(ritual => {
         const ritualState = gameState.darkRitualsState.find(s => s.id === ritual.id);
@@ -441,26 +442,27 @@ function updateRitualsDisplay() {
             button.disabled = true;
             button.classList.add('button-disabled');
         } else {
-            button.onclick = () => {
-                const gameLogic = window.gameLogic || (async () => {
-                    const module = await import('./gameLogic.js');
-                    return module;
-                })();
-                if (gameLogic.startDarkRitual) {
-                    gameLogic.startDarkRitual(ritual.id);
+            button.onclick = async () => {
+                try {
+                    const gameLogic = await import('./gameLogic.js');
+                    if (gameLogic.startDarkRitual) {
+                        gameLogic.startDarkRitual(ritual.id);
+                    }
+                } catch (error) {
+                    console.error('Error importing gameLogic:', error);
                 }
             };
         }
 
         ritualDiv.appendChild(button);
-        dom.ritualsListEl.appendChild(ritualDiv);
+        dom.darkRitualsListEl.appendChild(ritualDiv);
     });
 }
 
 function updateTemptationsDisplay() {
-    if (!dom.temptationsListEl) return;
+    if (!dom.availableTemptationsListEl) return;
 
-    dom.temptationsListEl.innerHTML = '';
+    dom.availableTemptationsListEl.innerHTML = '';
 
     const availableTemptations = allTemptationMissions.filter(temptation => {
         if (temptation.requiredLilithStage !== undefined && gameState.lilithStage < temptation.requiredLilithStage) return false;
@@ -509,23 +511,25 @@ function updateTemptationsDisplay() {
                 const decreaseBtn = minionControls.querySelector('.minion-decrease');
                 const increaseBtn = minionControls.querySelector('.minion-increase');
 
-                decreaseBtn.onclick = () => {
-                    const gameLogic = window.gameLogic || (async () => {
-                        const module = await import('./gameLogic.js');
-                        return module;
-                    })();
-                    if (gameLogic.changeAssignedMinions) {
-                        gameLogic.changeAssignedMinions(temptation.id, -1);
+                decreaseBtn.onclick = async () => {
+                    try {
+                        const gameLogic = await import('./gameLogic.js');
+                        if (gameLogic.changeAssignedMinions) {
+                            gameLogic.changeAssignedMinions(temptation.id, -1);
+                        }
+                    } catch (error) {
+                        console.error('Error importing gameLogic:', error);
                     }
                 };
 
-                increaseBtn.onclick = () => {
-                    const gameLogic = window.gameLogic || (async () => {
-                        const module = await import('./gameLogic.js');
-                        return module;
-                    })();
-                    if (gameLogic.changeAssignedMinions) {
-                        gameLogic.changeAssignedMinions(temptation.id, 1);
+                increaseBtn.onclick = async () => {
+                    try {
+                        const gameLogic = await import('./gameLogic.js');
+                        if (gameLogic.changeAssignedMinions) {
+                            gameLogic.changeAssignedMinions(temptation.id, 1);
+                        }
+                    } catch (error) {
+                        console.error('Error importing gameLogic:', error);
                     }
                 };
 
@@ -544,13 +548,14 @@ function updateTemptationsDisplay() {
                 button.disabled = true;
                 button.classList.add('button-disabled');
             } else {
-                button.onclick = () => {
-                    const gameLogic = window.gameLogic || (async () => {
-                        const module = await import('./gameLogic.js');
-                        return module;
-                    })();
-                    if (gameLogic.startTemptation) {
-                        gameLogic.startTemptation(temptation.id, false);
+                button.onclick = async () => {
+                    try {
+                        const gameLogic = await import('./gameLogic.js');
+                        if (gameLogic.startTemptation) {
+                            gameLogic.startTemptation(temptation.id, false);
+                        }
+                    } catch (error) {
+                        console.error('Error importing gameLogic:', error);
                     }
                 };
             }
@@ -567,13 +572,14 @@ function updateTemptationsDisplay() {
                     apprenticeButton.disabled = true;
                     apprenticeButton.classList.add('button-disabled');
                 } else {
-                    apprenticeButton.onclick = () => {
-                        const gameLogic = window.gameLogic || (async () => {
-                            const module = await import('./gameLogic.js');
-                            return module;
-                        })();
-                        if (gameLogic.startTemptation) {
-                            gameLogic.startTemptation(temptation.id, true);
+                    apprenticeButton.onclick = async () => {
+                        try {
+                            const gameLogic = await import('./gameLogic.js');
+                            if (gameLogic.startTemptation) {
+                                gameLogic.startTemptation(temptation.id, true);
+                            }
+                        } catch (error) {
+                            console.error('Error importing gameLogic:', error);
                         }
                     };
                 }
@@ -582,49 +588,63 @@ function updateTemptationsDisplay() {
             }
         }
 
-        dom.temptationsListEl.appendChild(temptationDiv);
+        dom.availableTemptationsListEl.appendChild(temptationDiv);
     });
+
+    // Update active temptation displays
+    if (gameState.activeTemptation && dom.activeTemptationDisplayEl) {
+        const activeTemptation = allTemptationMissions.find(t => t.id === gameState.activeTemptation);
+        const temptationState = gameState.temptationMissionsState.find(s => s.id === gameState.activeTemptation);
+        
+        if (activeTemptation && temptationState) {
+            dom.activeTemptationDisplayEl.classList.remove('hidden');
+            if (dom.activeTemptationTextEl) {
+                dom.activeTemptationTextEl.textContent = activeTemptation.title;
+            }
+            if (dom.activeTemptationTimerEl) {
+                dom.activeTemptationTimerEl.textContent = `Pozostały czas: ${temptationState.timeRemaining}s`;
+            }
+        }
+    } else if (dom.activeTemptationDisplayEl) {
+        dom.activeTemptationDisplayEl.classList.add('hidden');
+    }
+
+    if (gameState.activeTemptationApprentice && dom.activeApprenticeTemptationDisplayEl) {
+        const activeTemptation = allTemptationMissions.find(t => t.id === gameState.activeTemptationApprentice);
+        const temptationState = gameState.temptationMissionsState.find(s => s.id === gameState.activeTemptationApprentice);
+        
+        if (activeTemptation && temptationState) {
+            dom.activeApprenticeTemptationDisplayEl.classList.remove('hidden');
+            if (dom.activeApprenticeTemptationTextEl) {
+                dom.activeApprenticeTemptationTextEl.textContent = `Uczennica: ${activeTemptation.title}`;
+            }
+            if (dom.activeApprenticeTemptationTimerEl) {
+                dom.activeApprenticeTemptationTimerEl.textContent = `Pozostały czas: ${temptationState.timeRemainingApprentice}s`;
+            }
+        }
+    } else if (dom.activeApprenticeTemptationDisplayEl) {
+        dom.activeApprenticeTemptationDisplayEl.classList.add('hidden');
+    }
 }
 
 function updateMinionsDisplay() {
-    if (!dom.minionsListEl) return;
+    if (dom.praktykanciCountEl) {
+        dom.praktykanciCountEl.textContent = gameState.minions.praktykanci.count;
+    }
 
-    dom.minionsListEl.innerHTML = '';
+    if (dom.eliteApprenticeDisplayEl && dom.eliteApprenticeStatusEl) {
+        if (gameState.eliteMinion.apprentice.recruited) {
+            dom.eliteApprenticeDisplayEl.classList.remove('hidden');
+            dom.eliteApprenticeStatusEl.textContent = `Poziom ${gameState.eliteMinion.apprentice.level}`;
+        } else {
+            dom.eliteApprenticeDisplayEl.classList.add('hidden');
+        }
+    }
 
-    // Regular minions
-    Object.entries(gameState.minions).forEach(([type, minionData]) => {
-        if (!minionData.unlocked) return;
-
-        const minionDiv = document.createElement('div');
-        minionDiv.classList.add('minion-item');
-
-        minionDiv.innerHTML = `
-            <h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
-            <p>Liczba: ${minionData.count}</p>
-        `;
-
-        dom.minionsListEl.appendChild(minionDiv);
-    });
-
-    // Elite minions
-    Object.entries(gameState.eliteMinion).forEach(([type, minionData]) => {
-        if (!minionData.recruited) return;
-
-        const eliteMinion = allEliteMinions[`arch_succubus_${type}`];
-        if (!eliteMinion) return;
-
-        const minionDiv = document.createElement('div');
-        minionDiv.classList.add('elite-minion-item');
-
-        minionDiv.innerHTML = `
-            <h4>${eliteMinion.name}</h4>
-            <p>${eliteMinion.description}</p>
-            <p>Poziom: ${minionData.level}</p>
-            <p>Generuje: ${eliteMinion.passiveEssenceGeneration} Esencji/s</p>
-        `;
-
-        dom.minionsListEl.appendChild(minionDiv);
-    });
+    if (dom.minionActionsListEl) {
+        dom.minionActionsListEl.innerHTML = '';
+        // Add any minion-specific actions here if needed
+    }
 }
 
 function updateSexualPreferencesDisplay() {
@@ -636,19 +656,17 @@ function updateSexualPreferencesDisplay() {
         if (!preference.unlocked) return;
 
         const prefDiv = document.createElement('div');
-        prefDiv.classList.add('preference-item');
+        prefDiv.classList.add('preference-item-custom');
 
-        const progressBar = `
-            <div class="preference-progress">
-                <div class="preference-progress-bar" style="width: ${(preference.level / preference.maxLevel) * 100}%"></div>
-            </div>
-        `;
+        const progressPercentage = (preference.level / preference.maxLevel) * 100;
 
         prefDiv.innerHTML = `
-            <h4>${preference.name}</h4>
-            <p>${preference.description}</p>
-            <p>Poziom: ${preference.level}/${preference.maxLevel}</p>
-            ${progressBar}
+            <strong>${key.charAt(0).toUpperCase() + key.slice(1)}</strong>
+            <div class="description-text">${preference.description}</div>
+            <div>Poziom: ${preference.level}/${preference.maxLevel}</div>
+            <div class="level-bar-container">
+                <div class="level-bar" style="width: ${progressPercentage}%"></div>
+            </div>
         `;
 
         dom.sexualPreferencesListEl.appendChild(prefDiv);
@@ -665,51 +683,41 @@ function updateDiaryDisplay() {
     );
 
     unlockedEntries.forEach(entry => {
-        const entryDiv = document.createElement('div');
-        entryDiv.classList.add('diary-entry-item');
-
-        entryDiv.innerHTML = `
-            <h4>${entry.title}</h4>
-            <p class="diary-date">${entry.date}</p>
-        `;
-
         const button = document.createElement('button');
-        button.classList.add('interactive-button', 'button-secondary');
-        button.textContent = 'Czytaj';
+        button.classList.add('interactive-button', 'diary-entry-button-custom');
+        button.textContent = entry.title;
         button.onclick = () => showDiaryEntry(entry);
 
-        entryDiv.appendChild(button);
-        dom.diaryEntriesListEl.appendChild(entryDiv);
+        dom.diaryEntriesListEl.appendChild(button);
     });
 }
 
 function updateLoreDisplay() {
-    if (!dom.discoveredLoreListEl) return;
+    if (!dom.loreDropsContentEl) return;
 
-    dom.discoveredLoreListEl.innerHTML = '';
+    dom.loreDropsContentEl.innerHTML = '';
 
     gameState.discoveredLore.forEach(lore => {
         const loreDiv = document.createElement('div');
-        loreDiv.classList.add('lore-item');
+        loreDiv.classList.add('lore-drop-custom');
 
         loreDiv.innerHTML = `
-            <h4>${lore.name}</h4>
-            <p>${lore.text}</p>
+            <strong>${lore.name}</strong><br>
+            ${lore.text}
         `;
 
-        dom.discoveredLoreListEl.appendChild(loreDiv);
+        dom.loreDropsContentEl.appendChild(loreDiv);
     });
 }
 
 function updateGameAreaVisibility() {
     // Update visibility of game sections based on unlock conditions
     const areas = [
-        { id: 'research', element: dom.researchSectionEl },
-        { id: 'rituals', element: dom.ritualsSectionEl },
-        { id: 'temptations', element: dom.temptationsSectionEl },
-        { id: 'minions', element: dom.minionsSectionEl },
-        { id: 'preferences', element: dom.sexualPreferencesSectionEl },
-        { id: 'diary', element: dom.diarySectionEl }
+        { id: 'research', element: dom.researchAreaEl },
+        { id: 'rituals', element: dom.ritualsAreaEl },
+        { id: 'temptations', element: dom.temptationsAreaEl },
+        { id: 'minions', element: dom.minionsAreaEl },
+        { id: 'preferences', element: dom.preferencesAreaEl }
     ];
 
     areas.forEach(area => {
@@ -722,6 +730,15 @@ function updateGameAreaVisibility() {
             }
         }
     });
+
+    // Show essence generation button only after initial interaction
+    if (dom.generateEssenceButton) {
+        if (gameState.essenceGenerationUnlocked) {
+            dom.generateEssenceButton.classList.remove('hidden');
+        } else {
+            dom.generateEssenceButton.classList.add('hidden');
+        }
+    }
 }
 
 // Utility functions
@@ -735,12 +752,9 @@ export function showCustomAlert(message) {
 }
 
 function showDiaryEntry(entry) {
-    if (dom.diaryEntryContentAreaEl && dom.diaryEntryContentEl) {
-        dom.diaryEntryContentEl.innerHTML = `
-            <h3>${entry.title}</h3>
-            <p class="diary-date">${entry.date}</p>
-            <div class="diary-content">${entry.content}</div>
-        `;
+    if (dom.diaryEntryContentAreaEl && dom.diaryEntryTitleEl && dom.diaryEntryTextEl) {
+        dom.diaryEntryTitleEl.textContent = entry.title;
+        dom.diaryEntryTextEl.innerHTML = entry.content;
         dom.diaryEntryContentAreaEl.classList.remove('hidden');
     }
 }
@@ -754,14 +768,16 @@ export function displayEssenceReaction() {
     for (let i = essenceReactions.length - 1; i >= 0; i--) {
         const reaction = essenceReactions[i];
         if (currentEssence >= reaction.threshold && lastThreshold < reaction.threshold) {
-            if (dom.lilithThoughtsEl) {
-                dom.lilithThoughtsEl.textContent = reaction.text;
-                dom.lilithThoughtsEl.style.fontStyle = 'italic';
+            if (dom.lilithEssenceReactionEl) {
+                dom.lilithEssenceReactionEl.textContent = reaction.text;
+                dom.lilithEssenceReactionEl.style.opacity = '1';
                 
                 // Reset after a delay
                 setTimeout(() => {
-                    updateLilithThoughts();
-                }, 3000);
+                    if (dom.lilithEssenceReactionEl) {
+                        dom.lilithEssenceReactionEl.style.opacity = '0';
+                    }
+                }, BALANCE_MODIFIERS.thoughts.displayDurationMs);
             }
             gameState.lastEssenceReactionThreshold = reaction.threshold;
             break;
@@ -773,17 +789,21 @@ export function displayInitialVocalThought() {
     if (!gameState.lilithBecameVocal || gameState.firstVocalThoughtShown) return;
 
     const initialThought = lilithVocalThoughts.find(thought => thought.id === 'initial_vocal_thought');
-    if (initialThought && dom.lilithVocalThoughtsEl) {
-        dom.lilithVocalThoughtsEl.textContent = initialThought.text;
-        dom.lilithVocalThoughtsEl.style.fontStyle = initialThought.isItalic ? 'italic' : 'normal';
-        dom.lilithVocalThoughtsEl.classList.remove('hidden');
+    if (initialThought && dom.lilithVocalThoughtDisplayEl) {
+        dom.lilithVocalThoughtDisplayEl.textContent = initialThought.text;
+        if (initialThought.isItalic) {
+            dom.lilithVocalThoughtDisplayEl.classList.add('italic-thought');
+        } else {
+            dom.lilithVocalThoughtDisplayEl.classList.remove('italic-thought');
+        }
+        dom.lilithVocalThoughtDisplayEl.style.opacity = '1';
         gameState.firstVocalThoughtShown = true;
     }
 }
 
 export function displayRandomVocalThought() {
     if (!gameState.lilithBecameVocal || !gameState.firstVocalThoughtShown) return;
-    if (!dom.lilithVocalThoughtsEl) return;
+    if (!dom.lilithVocalThoughtDisplayEl) return;
 
     const validThoughts = lilithVocalThoughts.filter(thought => {
         if (thought.id === 'initial_vocal_thought') return false;
@@ -807,8 +827,19 @@ export function displayRandomVocalThought() {
 
     if (validThoughts.length > 0) {
         const randomThought = validThoughts[Math.floor(Math.random() * validThoughts.length)];
-        dom.lilithVocalThoughtsEl.textContent = randomThought.text;
-        dom.lilithVocalThoughtsEl.style.fontStyle = randomThought.isItalic ? 'italic' : 'normal';
-        dom.lilithVocalThoughtsEl.classList.remove('hidden');
+        dom.lilithVocalThoughtDisplayEl.textContent = randomThought.text;
+        if (randomThought.isItalic) {
+            dom.lilithVocalThoughtDisplayEl.classList.add('italic-thought');
+        } else {
+            dom.lilithVocalThoughtDisplayEl.classList.remove('italic-thought');
+        }
+        dom.lilithVocalThoughtDisplayEl.style.opacity = '1';
+
+        // Fade out after delay
+        setTimeout(() => {
+            if (dom.lilithVocalThoughtDisplayEl) {
+                dom.lilithVocalThoughtDisplayEl.style.opacity = '0';
+            }
+        }, BALANCE_MODIFIERS.vocalThoughts.fadeDelayMs);
     }
 }
