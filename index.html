@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gra: Korupcja Sukkuba v13.1 - Głośne Myśli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- Link to external CSS file -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-background text-text">
+    <div class="max-w-5xl mx-auto p-4 md:p-8 game-container">
+        <h1 class="text-4xl md:text-5xl font-bold text-center mb-4" style="color: rgb(var(--color-primary));">Gra o Korupcji Sukkuba</h1>
+
+        <!-- Save/Load Buttons -->
+        <div class="grid grid-cols-3 gap-2 mb-6">
+            <button id="save-game-button" class="interactive-button button-save">Zapisz Grę</button>
+            <button id="load-game-button" class="interactive-button button-load">Wczytaj Grę</button>
+            <button id="reset-game-button" class="interactive-button button-reset">Resetuj Grę</button>
+        </div>
+
+        <!-- Sekcja Lilith -->
+        <div class="card mb-6">
+            <h2 class="card-header text-2xl md:text-3xl text-center" id="lilith-name-stage">Sukkub - Etap Przyzwana</h2>
+            <div class="w-36 h-48 md:w-48 md:h-64 bg-surface-dark mx-auto mb-3 rounded-md flex items-center justify-center italic lilith-image-placeholder float-animation" id="lilith-image"><img id="lilith-img-tag" src="images/lilith_placeholder.png" alt="Obraz Lilith" class="w-full h-full object-cover rounded-md"></div>
+            <p id="lilith-description" class="mt-2 italic text-center text-text-muted">Lilith jest w szoku po przyzwaniu...</p>
+            <!-- NOWY ELEMENT DLA GŁOŚNYCH MYŚLI LILITH -->
+            <p id="lilith-vocal-thought-display" class="text-center"></p>
+            <div class="min-h-[60px] mt-1 flex flex-col items-center lilith-feedback">
+                <p id="lilith-essence-reaction" class="text-sm italic transition-opacity duration-500 mt-1"></p>
+                <p id="lilith-upgrade-reaction" class="text-sm italic transition-opacity duration-500 mt-1"></p>
+                <p id="lilith-thought" class="text-sm italic transition-opacity duration-500 mt-1"></p>
+            </div>
+        </div>
+
+        <!-- Sekcja Zasobów i Statystyk -->
+        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="resource-item-custom">
+                <span class="emoji">✨</span>
+                <div class="text-sm" style="color: rgb(var(--color-primary-light));">Esencja</div>
+                <strong id="essence-count" class="text-xl block">0</strong>
+            </div>
+            <div class="resource-item-custom">
+                <span class="emoji">🔮</span>
+                <div class="text-sm" style="color: rgb(var(--color-dark-essence));">Mroczna Esencja</div>
+                <strong id="dark-essence-count" class="text-xl block">0</strong>
+            </div>
+            <div class="resource-item-custom">
+                <span class="emoji">⏱️</span>
+                <div class="text-sm" style="color: rgb(var(--color-primary-light)); opacity: 0.8;">Esencja/sek</div>
+                <strong id="passive-essence-rate" class="text-xl block">0.0</strong>
+            </div>
+             <div class="resource-item-custom">
+                <span class="emoji">💗</span>
+                <div class="text-sm" style="color: rgb(var(--color-corruption));">Korupcja</div>
+                <strong id="corruption-count" class="text-xl block">0</strong>
+            </div>
+            <div class="resource-item-custom col-span-2 sm:col-span-1 md:col-span-2">
+                <span class="emoji">👆</span>
+                <div class="text-sm" style="color: rgb(var(--color-primary-light)); opacity: 0.9;">Esencja/klik</div>
+                <strong id="essence-per-click" class="text-xl block">1</strong>
+            </div>
+        </div>
+        
+        <button id="generate-essence-button" class="interactive-button button-accent mb-6 hidden pulse-animation">Generuj Esencję</button>
+
+        <!-- NOWA SEKCJA: Aktywna Interakcja (oddzielona od listy interakcji) -->
+        <div id="active-interaction-section" class="card mb-6 hidden">
+            <h3 class="card-header">Aktywna Interakcja</h3>
+            <div id="current-dialogue-area">
+                <p id="dialogue-text" class="mb-3 leading-relaxed whitespace-pre-wrap"></p>
+                <div id="dialogue-options" class="space-y-2"></div>
+                <p id="dialogue-response" class="mt-3 italic text-text-muted"></p>
+            </div>
+        </div>
+
+        <!-- Sekcje Gry w Kartach -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- ZMIENIONA SEKCJA: Tylko lista dostępnych interakcji -->
+            <div id="dialogue-section" class="card">
+                <h3 class="card-header">Dostępne Interakcje</h3>
+                <div id="available-dialogues" class="space-y-2"></div>
+            </div>
+
+            <div id="upgrades-section" class="card">
+                <h3 class="card-header">Ulepszenia</h3>
+                <div id="upgrades-list" class="space-y-2"></div>
+            </div>
+            
+            <div id="research-area" class="card hidden">
+                <h3 class="card-header">Badania nad Naturą Sukkubów</h3>
+                <div id="research-projects-list" class="space-y-3"></div>
+                <div id="lore-drops-display" class="mt-4">
+                    <h4 class="text-lg font-semibold" style="color: rgb(var(--color-primary-light));">Odkryta Wiedza:</h4>
+                    <div id="lore-drops-content" class="space-y-2 mt-2"></div>
+                </div>
+            </div>
+
+            <div id="temptations-area" class="card hidden">
+                <h3 class="card-header">System Pokus</h3>
+                <div id="active-temptation-display-custom" class="mt-4 hidden">
+                    <p id="active-temptation-text" class="font-semibold"></p>
+                    <p id="active-temptation-timer" class="text-sm italic"></p>
+                    <p id="active-temptation-narrative-custom" class="text-sm"></p> 
+                </div>
+                <div id="active-apprentice-temptation-display-custom" class="mt-4 hidden">
+                    <p id="active-apprentice-temptation-text" class="font-semibold"></p>
+                    <p id="active-apprentice-temptation-timer" class="text-sm italic"></p>
+                    <p id="active-apprentice-temptation-narrative-custom" class="text-sm"></p>
+                </div>
+                <div id="available-temptations-list" class="mt-4 space-y-3"></div>
+            </div>
+
+            <div id="rituals-area" class="card hidden">
+                <h3 class="card-header">Mroczne Rytuały</h3>
+                <div id="dark-rituals-list" class="space-y-3"></div>
+            </div>
+            
+            <div id="minions-area" class="card hidden">
+                <h3 class="card-header">Twoi Słudzy</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="resource-item-custom">Praktykanci: <strong id="praktykanci-count" class="text-xl block">0</strong></div>
+                    <div id="elite-apprentice-display" class="resource-item-custom hidden">Uczennica: <strong id="elite-apprentice-status" class="text-lg block">Nie zrekrutowano</strong></div>
+                </div>
+                <div id="minion-actions-list" class="mt-3 space-y-2"></div>
+            </div>
+
+            <div id="preferences-area" class="card">
+                <h3 class="card-header">Preferencje Seksualne Lilith</h3>
+                <div id="sexual-preferences-list" class="space-y-3"></div>
+            </div>
+            
+            <div id="upgrade-choices-container" class="card hidden">
+                <h3 class="card-header" id="upgrade-choice-prompt">Wybierz Ulepszenie</h3>
+                <div id="upgrade-choices-list" class="space-y-3"></div>
+            </div>
+
+            <div id="diary-container" class="card md:col-span-2">
+                <h3 class="card-header">Pamiętnik Lilith</h3>
+                <div id="diary-entries-list" class="space-y-2"></div>
+                <div id="diary-entry-content-area-custom" class="hidden">
+                    <h4 id="diary-entry-title-custom" class="text-lg font-semibold mb-2"></h4>
+                    <p id="diary-entry-text" class="text-text-muted"></p>
+                    <button id="close-diary-entry-button" class="interactive-button button-accent mt-3">Zamknij wpis</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOWA SEKCJA: Przyciski do testowania (na dole strony) -->
+        <div class="card mt-6">
+            <h3 class="card-header">🧪 Narzędzia Testowe</h3>
+            <p class="text-sm text-text-muted mb-4 italic">Przyciski pomocnicze do testowania gry. Każdy dodaje +10000 do odpowiedniego zasobu.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button id="cheat-essence-button" class="interactive-button button-primary">
+                    ✨ +10000 Esencji
+                </button>
+                <button id="cheat-dark-essence-button" class="interactive-button button-secondary">
+                    🔮 +10000 Mrocznej Esencji
+                </button>
+                <button id="cheat-corruption-button" class="interactive-button button-accent">
+                    💗 +10000 Korupcji
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-alert-modal" class="modal-overlay-custom hidden">
+        <div class="modal-content-custom">
+            <p id="custom-alert-message"></p>
+            <button id="custom-alert-close-button" class="interactive-button modal-button-custom">OK</button>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
